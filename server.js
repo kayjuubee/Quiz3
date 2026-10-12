@@ -55,6 +55,7 @@ function next(){
  phase='question';answers={};started=Date.now();deadline=started+Math.max(5,Number(question().time)||20)*1000;emit();
 }
 setInterval(()=>{if(phase==='question'&&Date.now()>=deadline)reveal()},250);
+app.get('/logo.svg',(req,res)=>res.sendFile(process.cwd()+'/logo.svg'));
 app.get('/api/network',(req,res)=>res.json({ip:ip(),port:PORT,url:'http://'+ip()+':'+PORT+'/play'}));
 app.get('/api/qr',async(req,res)=>{try{res.type('png').send(await QRCode.toBuffer('http://'+ip()+':'+PORT+'/play',{width:350,margin:2}))}catch(e){res.status(500).send(e.message)}});
 app.get('/api/quizzes',(req,res)=>res.json(quizzes));
