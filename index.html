@@ -9,6 +9,7 @@ window.choose=i=>{if(submitted)return;chosen=state.question.type==='multi'?(Arra
 window.move=(i,delta)=>{const arr=chosen;const j=i+delta;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];render()};
 window.send=()=>{const q=state.question;if(['estimate','text'].includes(q.type))chosen=document.querySelector('#answer')?.value;if(q.type==='boolean')chosen=chosen===true||chosen===false?chosen:null;if(chosen===null||chosen===''||(Array.isArray(chosen)&&!chosen.length))return;socket.emit('answer',chosen,r=>{if(r?.ok){submitted=true;render()}})};
 window.host=type=>socket.emit('host',{type,key:hostKey},r=>{if(r?.error)alert(r.error)});
+window.setLeaderboard=visible=>socket.emit('host',{type:'leaderboard',visible,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.selectQuiz=id=>socket.emit('host',{type:'select',id,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.saveKey=()=>{hostKey=document.querySelector('#key').value;sessionStorage.setItem('hostKey',hostKey);alert('Schlüssel gespeichert')};
 window.join=()=>{const name=document.querySelector('#name').value;socket.emit('join',{name,id:myId},r=>{if(r?.error)return alert(r.error);myId=r.id;localStorage.setItem('kq-id',myId);render()})};
@@ -22,21 +23,21 @@ function render(){
  if(!state)return;
  let html='<h1>🎉 KayJuuBee Quiz</h1>';
  if(view==='host'){
- html+='<div class="panel"><h2>Spielleitung</h2><label>Quiz wählen: <select onchange="selectQuiz(this.value)">'+state.quizzes.map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
+ html+='<div class="panel"><h2>Spielleitung</h2><label>Quiz wählen: <select onchange="selectQuiz(this.value)">'+state.quizzes.map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p><label><input type="checkbox" onchange="setLeaderboard(this.checked)" '+(state.leaderboardVisible?'checked':'')+'> Bestenliste auf Beamer und Smartphones anzeigen</label></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
  html+=state.question&&state.phase!=='lobby'?questionUI():'<div class="panel">Warte auf den Spielstart.</div>';
  html+='<div class="panel"><h2>Rangliste</h2>'+ranking()+'</div><div class="panel"><h2>Quiz-Fragen bearbeiten</h2><p>JSON-Editor: komplette Quizsammlung bearbeiten und speichern.</p><button onclick="loadEditor()">Editor laden</button><div id="editor"></div></div>';
  }else if(view==='screen'){
  html+='<div class="panel"><h2>'+esc(state.quizTitle)+'</h2><p>Mitmachen: QR-Code scannen und Namen eingeben</p><img src="/api/qr" width="260" alt="QR-Code zum Beitreten"></div>';
  if(state.phase==='question')html+=questionUI();
  if(state.phase==='result')html+='<div class="panel"><h2>Richtige Antwort</h2><div class="big">'+esc(Array.isArray(state.results?.correct)?state.results.correct.map(i=>state.question.options?.[i]??i).join(', '):typeof state.results?.correct==='number'&&state.question.options?state.question.options[state.results.correct]:state.results?.correct)+'</div></div>';
- if(state.phase==='finished')html+='<div class="panel"><h2>🏆 Finale Rangliste</h2></div>';
- html+='<div class="panel"><h2>Rangliste</h2>'+ranking()+'</div>';
+ if(state.phase==='finished'&&state.leaderboardVisible)html+='<div class="panel"><h2>🏆 Finale Rangliste</h2></div>';
+ if(state.leaderboardVisible)html+='<div class="panel"><h2>Rangliste</h2>'+ranking()+'</div>';
  }else{
  if(!myId||!state.players.some(p=>p.id===myId))html+='<div class="panel"><h2>Mitspielen</h2><input id="name" placeholder="Dein Name" maxlength="35"> <button onclick="join()">Beitreten</button></div>';
  else{const me=state.players.find(p=>p.id===myId);html+='<div class="panel">Hallo <b>'+esc(me.name)+'</b> · '+me.score+' Punkte</div>';
  if(state.phase==='question')html+=questionUI();
  else if(state.phase==='result')html+='<div class="panel"><h2>Frage beendet!</h2><p>Warte auf die nächste Runde.</p></div>';
- else if(state.phase==='finished')html+='<div class="panel"><h2>🏆 Quiz beendet!</h2>'+ranking()+'</div>';
+ else if(state.phase==='finished')html+='<div class="panel"><h2>🏆 Quiz beendet!</h2>'+(state.leaderboardVisible?ranking():'<p>Danke fürs Mitspielen!</p>')+'</div>';
  else html+='<div class="panel"><h2>Du bist dabei!</h2><p>Warte auf den Start.</p></div>';
  }}
  app.innerHTML=html;updateTimer();
