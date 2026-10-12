@@ -42,6 +42,32 @@ input[type=checkbox]{accent-color:#18d5c7;width:22px;height:22px;vertical-align:
 a{color:#46fff0}
 @media(max-width:850px){.screen-layout{grid-template-columns:1fr}.screen-center{grid-row:1}.screen-side{position:static}.screen-center .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){main{padding:12px}.panel{padding:14px}.screen-center .grid{grid-template-columns:1fr}.brand-header{min-height:80px}.brand-header img{max-height:90px}}
+
+.mode-switch{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 0}.mode-button{opacity:.65;background:#203b43;color:#fff;border:2px solid #7e9ca3}.mode-button.active{opacity:1;background:#18d7c8;color:#071314;border:3px solid #fff}
+.kids-mode{background:radial-gradient(circle at 15% 15%,#ffdf7a88,transparent 35%),radial-gradient(circle at 85% 5%,#fb9be688,transparent 30%),linear-gradient(135deg,#5742b5,#1b96ac 60%,#1e8d87);font-family:system-ui,Arial,sans-serif}
+.kids-mode:before{opacity:.12}
+.kids-mode .panel{background:#fffaf2;color:#26345a;border:4px solid #ffd34c;border-radius:26px;box-shadow:7px 8px 0 #46318355}
+.kids-mode h2{color:#4e3a9a;font-family:system-ui,Arial,sans-serif;font-weight:900}
+.kids-mode .muted{color:#51547a}
+.kids-mode .kids-banner{font-size:clamp(22px,4vw,49px);font-weight:1000;letter-spacing:1px;text-align:center;color:#fff;background:#a84cc6;border:4px solid #fff49a;border-radius:22px;padding:12px;margin:5px auto 20px;max-width:950px;text-shadow:2px 3px #53276a}
+.kids-mode .option{background:#ffeeb2;color:#27325a;border:4px solid #ffad4a;border-radius:24px;font-size:clamp(22px,2.5vw,36px);padding:22px 15px;min-height:85px;box-shadow:3px 5px 0 #b56c4d55}
+.kids-mode .option:nth-child(2n){background:#d2f8ff;border-color:#4ec9ec}
+.kids-mode .option:nth-child(3n){background:#f5d6ff;border-color:#c477ef}
+.kids-mode .option.selected{background:#b9ff9d;border-color:#4fc858}
+.kids-mode button:not(.option){background:#ffd34c;color:#35215d;border:2px solid #5e43b3}
+.kids-mode .timer{color:#8e45c9;text-shadow:none;font-weight:1000}
+.kids-mode .screen-center .question-panel{background:#fffaf2}
+.kids-mode .screen-center .question-panel h2{background:#fff1ad;color:#443075;border-radius:20px}
+.kids-mode .screen-side .panel{border-color:#ffd34c}
+.kids-mode .screen-side li{background:#f0e9ff;border:2px solid #bb9be9;color:#372c64}
+.kids-mode .screen-side li:before{color:#8c49bf}
+.kids-mode .screen-side li:nth-child(1){background:#ffe67e;color:#35265c}
+.kids-mode .screen-side li:nth-child(2){background:#e6f0ff;color:#35265c}
+.kids-mode .screen-side li:nth-child(3){background:#ffd4b8;color:#35265c}
+.kids-mode .screen-side .join-steps span{color:#8e45c9}
+.kids-mode .brand-header img{filter:drop-shadow(0 5px 0 #472d9c)}
+.kids-mode a{color:#5436b3}
+@media(max-width:650px){.kids-mode .option{min-height:74px;padding:15px}.mode-switch{gap:7px}}
 </style></head><body><main id="app"></main><script src="/socket.io/socket.io.js"></script><script>
 const socket=io(), view=location.pathname.slice(1)||'host', app=document.querySelector('#app');
 let state=null,myId=localStorage.getItem('kq-id'),chosen=null,submitted=false,hostKey=sessionStorage.getItem('hostKey')||'',tick;
@@ -52,6 +78,7 @@ window.choose=i=>{if(submitted)return;chosen=state.question.type==='multi'?(Arra
 window.move=(i,delta)=>{const arr=chosen;const j=i+delta;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];render()};
 window.send=()=>{const q=state.question;if(['estimate','text'].includes(q.type))chosen=document.querySelector('#answer')?.value;if(q.type==='boolean')chosen=chosen===true||chosen===false?chosen:null;if(chosen===null||chosen===''||(Array.isArray(chosen)&&!chosen.length))return;socket.emit('answer',chosen,r=>{if(r?.ok){submitted=true;render()}})};
 window.host=type=>socket.emit('host',{type,key:hostKey},r=>{if(r?.error)alert(r.error)});
+window.setKidsMode=enabled=>{if(confirm('Spielmodus wechseln? Die laufende Runde und alle Punkte werden zurückgesetzt.'))socket.emit('host',{type:'kidsMode',enabled,key:hostKey},r=>{if(r?.error)alert(r.error)});else render()};
 window.setLeaderboard=visible=>socket.emit('host',{type:'leaderboard',visible,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.selectQuiz=id=>socket.emit('host',{type:'select',id,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.saveKey=()=>{hostKey=document.querySelector('#key').value;sessionStorage.setItem('hostKey',hostKey);alert('Schlüssel gespeichert')};
@@ -64,10 +91,10 @@ else input=opts(q);
 return '<div class="panel question-panel"><p class="muted">Frage '+(state.index+1)+' / '+state.total+'</p><h2>'+esc(q.text)+'</h2><div class="timer" id="timer"></div>'+input+(view==='play'?'<p><button onclick="send()" '+(submitted?'disabled':'')+'>'+(submitted?'Antwort abgegeben':'Antwort senden')+'</button></p>':'')+'</div>'}
 function render(){
  if(!state)return;
- document.body.className=view+'-view';
- let html='<header class="brand-header"><img src="/logo-original.webp" onerror="this.onerror=null;this.src='/logo.svg'" alt="KayJuuBee Eventmodule"></header>';
+ document.body.className=view+'-view'+(state.kidsMode?' kids-mode':'');
+ let html='<header class="brand-header"><img src="/logo-original.webp" onerror="this.onerror=null;this.src=&quot;/logo.svg&quot;" alt="KayJuuBee Eventmodule"></header>'+(state.kidsMode?'<div class="kids-banner">🌈 KAYJUUBEE KIDS QUIZ ⭐</div>':'');
  if(view==='host'){
- html+='<div class="panel"><h2>Spielleitung</h2><label>Quiz wählen: <select onchange="selectQuiz(this.value)">'+state.quizzes.map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p><label><input type="checkbox" onchange="setLeaderboard(this.checked)" '+(state.leaderboardVisible?'checked':'')+'> Bestenliste auf Beamer und Smartphones anzeigen</label></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
+ html+='<div class="panel"><h2>Spielleitung</h2><div class="mode-switch"><strong>🎮 Spielmodus:</strong> <button class="mode-button '+(!state.kidsMode?'active':'')+'" onclick="setKidsMode(false)">🧠 Standard</button> <button class="mode-button '+(state.kidsMode?'active':'')+'" onclick="setKidsMode(true)">🌈 Kinderquiz</button></div><p class="muted">'+(state.kidsMode?'Kinderquiz: einfache Fragen, längere Antwortzeit, 1000 Punkte pro richtiger Antwort.':'Standardquiz: 800 Punkte + bis zu 200 Zeitbonus.')+'</p><label>Quiz wählen: <select onchange="selectQuiz(this.value)" '+(state.kidsMode?'disabled':'')+'>'+state.quizzes.filter(q=>!state.kidsMode||q.id==='kinder').map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p><label><input type="checkbox" onchange="setLeaderboard(this.checked)" '+(state.leaderboardVisible?'checked':'')+'> Bestenliste auf Beamer und Smartphones anzeigen</label></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
  html+=state.question&&state.phase!=='lobby'?questionUI():'<div class="panel">Warte auf den Spielstart.</div>';
  html+='<div class="panel"><h2>🏆 Rangliste</h2>'+ranking()+'</div><div class="panel"><h2>Quiz-Fragen bearbeiten</h2><p>JSON-Editor: komplette Quizsammlung bearbeiten und speichern.</p><button onclick="loadEditor()">Editor laden</button><div id="editor"></div></div>';
  }else if(view==='screen'){
