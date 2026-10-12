@@ -82,7 +82,8 @@ window.setKidsMode=enabled=>{if(confirm('Spielmodus wechseln? Die laufende Runde
 window.setLeaderboard=visible=>socket.emit('host',{type:'leaderboard',visible,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.selectQuiz=id=>socket.emit('host',{type:'select',id,key:hostKey},r=>{if(r?.error)alert(r.error)});
 window.saveKey=()=>{hostKey=document.querySelector('#key').value;sessionStorage.setItem('hostKey',hostKey);alert('Schlüssel gespeichert')};
-window.join=()=>{const name=document.querySelector('#name').value;socket.emit('join',{name,id:myId},r=>{if(r?.error)return alert(r.error);myId=r.id;localStorage.setItem('kq-id',myId);render()})};
+window.join=()=>{const name=document.querySelector('#name')?.value||'';socket.emit('join',{name,id:myId},r=>{if(r?.error)return alert(r.error);myId=r.id;localStorage.setItem('kq-id',myId);render()})};
+socket.on('connect',()=>{if(myId)socket.emit('join',{id:myId},r=>{if(r?.restored){submitted=!!(state?.phase==='question'&&state?.myAnswered);render()}else if(r?.error){myId=null;localStorage.removeItem('kq-id');render()}})});
 function questionUI(){const q=state.question;if(!q)return '';let input='';
 if(q.type==='boolean')input='<div class="grid"><button class="option '+(chosen===true?'selected':'')+'" onclick="chosen=true;render()">Richtig</button><button class="option '+(chosen===false?'selected':'')+'" onclick="chosen=false;render()">Falsch</button></div>';
 else if(q.type==='order'){if(!Array.isArray(chosen))chosen=q.options.map((_,i)=>i);input=chosen.map((id,i)=>'<div class="panel">'+esc(q.options[id])+' <button onclick="move('+i+',-1)">↑</button> <button onclick="move('+i+',1)">↓</button></div>').join('')}
