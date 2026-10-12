@@ -1,5 +1,48 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KayJuuBee Quiz</title><style>
-:root{font-family:system-ui,Arial;background:#10182d;color:#fff}*{box-sizing:border-box}body{margin:0}main{max-width:1050px;margin:auto;padding:24px}h1{color:#8ce9fd;font-size:clamp(30px,5vw,58px)}h2{font-size:clamp(23px,3vw,36px)}.panel{background:#1d2b46;border-radius:18px;padding:22px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}button,select,input,textarea{font:inherit;border-radius:12px;padding:13px;border:1px solid #64748b}button{background:#27c5e8;color:#071320;font-weight:700;cursor:pointer}button:disabled{opacity:.4}input,select,textarea{background:#f8fafc;color:#101828;max-width:100%}.option{display:block;width:100%;text-align:left;margin:9px 0;background:#f8fafc}.selected{background:#ffd36e}.muted{color:#b4c5dc}.big{font-size:clamp(30px,7vw,90px);font-weight:800}.pill{display:inline-block;padding:8px 15px;background:#324968;border-radius:20px;margin:5px}img{max-width:100%;background:white;border-radius:12px}ol li{padding:7px}textarea{width:100%;height:260px;font-family:monospace;font-size:13px}.timer{font-size:30px;color:#ffda7b}#notice{color:#ffda7b}body:has(.screen-layout) main{max-width:none;width:100%;padding:14px 22px} .screen-layout{display:grid;grid-template-columns:minmax(180px,20%) minmax(0,1fr) minmax(180px,23%);gap:18px;align-items:start;min-height:78vh}.screen-layout .panel{margin:0}.screen-center{min-width:0}.screen-center h2{font-size:clamp(28px,3.5vw,60px)}.screen-center .panel{min-height:55vh}.screen-side{position:sticky;top:12px}.screen-side img{width:100%;max-width:230px}.screen-side ol{padding-left:26px}.screen-side li{overflow-wrap:anywhere}.screen-center .option{font-size:clamp(18px,1.8vw,28px);padding:18px}.screen-center .timer{font-size:clamp(30px,4vw,65px)}@media(max-width:850px){.screen-layout{grid-template-columns:1fr}.screen-side{position:static}.screen-center{grid-row:1}.screen-side img{max-width:180px}} </style></head><body><main id="app"></main><script src="/socket.io/socket.io.js"></script><script>
+:root{font-family:system-ui,Arial;background:#10182d;color:#fff}*{box-sizing:border-box}body{margin:0}main{max-width:1050px;margin:auto;padding:24px}h1{color:#8ce9fd;font-size:clamp(30px,5vw,58px)}h2{font-size:clamp(23px,3vw,36px)}.panel{background:#1d2b46;border-radius:18px;padding:22px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}button,select,input,textarea{font:inherit;border-radius:12px;padding:13px;border:1px solid #64748b}button{background:#27c5e8;color:#071320;font-weight:700;cursor:pointer}button:disabled{opacity:.4}input,select,textarea{background:#f8fafc;color:#101828;max-width:100%}.option{display:block;width:100%;text-align:left;margin:9px 0;background:#f8fafc}.selected{background:#ffd36e}.muted{color:#b4c5dc}.big{font-size:clamp(30px,7vw,90px);font-weight:800}.pill{display:inline-block;padding:8px 15px;background:#324968;border-radius:20px;margin:5px}img{max-width:100%;background:white;border-radius:12px}ol li{padding:7px}textarea{width:100%;height:260px;font-family:monospace;font-size:13px}.timer{font-size:30px;color:#ffda7b}#notice{color:#ffda7b}body:has(.screen-layout) main{max-width:none;width:100%;padding:14px 22px} .screen-layout{display:grid;grid-template-columns:minmax(180px,20%) minmax(0,1fr) minmax(180px,23%);gap:18px;align-items:start;min-height:78vh}.screen-layout .panel{margin:0}.screen-center{min-width:0}.screen-center h2{font-size:clamp(28px,3.5vw,60px)}.screen-center .panel{min-height:55vh}.screen-side{position:sticky;top:12px}.screen-side img{width:100%;max-width:230px}.screen-side ol{padding-left:26px}.screen-side li{overflow-wrap:anywhere}.screen-center .option{font-size:clamp(18px,1.8vw,28px);padding:18px}.screen-center .timer{font-size:clamp(30px,4vw,65px)}@media(max-width:850px){.screen-layout{grid-template-columns:1fr}.screen-side{position:static}.screen-center{grid-row:1}.screen-side img{max-width:180px}} 
+:root{font-family:Impact,"Arial Black",system-ui,sans-serif;background:#070e12;color:#f4ffff;--aqua:#22e5d2;--deep:#061014}
+body{background:radial-gradient(ellipse at 50% -20%,#11645f88,transparent 48%),repeating-linear-gradient(135deg,#0b161a 0 4px,#081115 4px 26px);min-height:100vh}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background:repeating-conic-gradient(from 20deg at 50% 8%,transparent 0 13deg,#15998e 13deg 15deg,transparent 15deg 26deg)}
+main{position:relative;max-width:1280px;padding:18px 22px 55px}
+h1{font-size:clamp(28px,4vw,55px);text-transform:uppercase;letter-spacing:1px;text-shadow:3px 4px #000}
+h2{font-size:clamp(23px,2.5vw,37px);text-transform:uppercase;letter-spacing:.3px}
+.panel{background:linear-gradient(145deg,#111c21,#071014);border:2px solid #19d8ca;border-radius:12px;box-shadow:6px 7px 0 #000,0 0 20px #00ddc319;padding:22px}
+button{background:linear-gradient(145deg,#55ffed,#12bdb4);color:#061315;border:2px solid #061315;box-shadow:3px 4px 0 #000;font-weight:900;text-transform:uppercase}
+button:hover{filter:brightness(1.1)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #fff}
+.option{background:#f0f3f3;color:#071317;border:3px solid #1edbd0;border-radius:12px;text-align:center;font-size:clamp(18px,2vw,29px);font-weight:900}
+.option.selected{background:#41f5e5}
+.muted{color:#b9d5d4}.timer{color:#32eddd;font-size:clamp(35px,5vw,70px);text-align:center;text-shadow:3px 4px #000}
+.brand-header{display:flex;justify-content:center;align-items:center;padding:5px 10px 10px;min-height:115px}
+.brand-header img{background:none;border-radius:0;width:min(500px,75vw);max-height:125px;object-fit:contain;filter:drop-shadow(0 8px 1px #000)}
+.screen-layout{grid-template-columns:minmax(180px,21%) minmax(0,1fr) minmax(190px,23%);gap:16px}
+.screen-layout .screen-center .panel{min-height:0}
+.screen-layout .screen-center .question-panel{min-height:58vh}
+.screen-side .panel{border-color:#22e5d2}
+.screen-side h2{font-size:clamp(20px,2.1vw,30px)}
+.screen-side ol{list-style:none;padding:0;counter-reset:rank}
+.screen-side li{counter-increment:rank;display:flex;justify-content:space-between;gap:8px;border:1px solid #21e5d2;border-radius:8px;padding:10px;margin:7px 0;font-size:clamp(14px,1.2vw,20px);background:#071014}
+.screen-side li:before{content:counter(rank);font-weight:900;color:#23e9d6;margin-right:4px}
+.screen-side li:nth-child(1){border-color:#ffd348;color:#ffd348}.screen-side li:nth-child(2){border-color:#cfd9e2}.screen-side li:nth-child(3){border-color:#dc955f}
+.screen-side img{width:100%;max-width:240px;background:white;padding:8px}
+.screen-center .question-panel h2{background:#eef3f2;color:#071014;padding:22px 14px;border-radius:8px;text-align:center;font-size:clamp(26px,3vw,48px)}
+.screen-center .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.screen-center .option{padding:18px 12px}
+.screen-center .option:nth-child(1){background:#7df7e9}
+.screen-center .option.selected{background:#1be5d2}
+.screen-center .question-panel{background:linear-gradient(145deg,#0b181c,#061014)}
+.screen-center .timer{margin:14px auto}
+.screen-center .question-panel .muted{text-align:center;text-transform:uppercase}
+.screen-side .join-steps{font-family:system-ui,sans-serif;font-weight:750;line-height:1.8;font-size:clamp(14px,1.2vw,19px)}
+.screen-side .join-steps span{color:#22e5d2;font-weight:900}
+.play-view main{max-width:740px}.play-view .panel{margin:18px 0}.play-view .option{min-height:64px}
+.host-view main{max-width:1250px}.host-view .panel{margin:18px 0}
+.host-view .panel:first-of-type{border-top-width:5px}
+input[type=checkbox]{accent-color:#18d5c7;width:22px;height:22px;vertical-align:middle}
+a{color:#46fff0}
+@media(max-width:850px){.screen-layout{grid-template-columns:1fr}.screen-center{grid-row:1}.screen-side{position:static}.screen-center .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){main{padding:12px}.panel{padding:14px}.screen-center .grid{grid-template-columns:1fr}.brand-header{min-height:80px}.brand-header img{max-height:90px}}
+</style></head><body><main id="app"></main><script src="/socket.io/socket.io.js"></script><script>
 const socket=io(), view=location.pathname.slice(1)||'host', app=document.querySelector('#app');
 let state=null,myId=localStorage.getItem('kq-id'),chosen=null,submitted=false,hostKey=sessionStorage.getItem('hostKey')||'',tick;
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,17 +61,18 @@ if(q.type==='boolean')input='<div class="grid"><button class="option '+(chosen==
 else if(q.type==='order'){if(!Array.isArray(chosen))chosen=q.options.map((_,i)=>i);input=chosen.map((id,i)=>'<div class="panel">'+esc(q.options[id])+' <button onclick="move('+i+',-1)">↑</button> <button onclick="move('+i+',1)">↓</button></div>').join('')}
 else if(q.type==='estimate'||q.type==='text')input='<input id="answer" '+(q.type==='estimate'?'type="number"':'type="text"')+' placeholder="Deine Antwort" value="'+esc(chosen??'')+'">';
 else input=opts(q);
-return '<div class="panel"><p class="muted">Frage '+(state.index+1)+' / '+state.total+'</p><h2>'+esc(q.text)+'</h2><div class="timer" id="timer"></div>'+input+(view==='play'?'<p><button onclick="send()" '+(submitted?'disabled':'')+'>'+(submitted?'Antwort abgegeben':'Antwort senden')+'</button></p>':'')+'</div>'}
+return '<div class="panel question-panel"><p class="muted">Frage '+(state.index+1)+' / '+state.total+'</p><h2>'+esc(q.text)+'</h2><div class="timer" id="timer"></div>'+input+(view==='play'?'<p><button onclick="send()" '+(submitted?'disabled':'')+'>'+(submitted?'Antwort abgegeben':'Antwort senden')+'</button></p>':'')+'</div>'}
 function render(){
  if(!state)return;
- let html='<h1>🎉 KayJuuBee Quiz</h1>';
+ document.body.className=view+'-view';
+ let html='<header class="brand-header"><img src="/logo.svg" alt="KayJuuBee Eventmodule"></header>';
  if(view==='host'){
  html+='<div class="panel"><h2>Spielleitung</h2><label>Quiz wählen: <select onchange="selectQuiz(this.value)">'+state.quizzes.map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p><label><input type="checkbox" onchange="setLeaderboard(this.checked)" '+(state.leaderboardVisible?'checked':'')+'> Bestenliste auf Beamer und Smartphones anzeigen</label></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
  html+=state.question&&state.phase!=='lobby'?questionUI():'<div class="panel">Warte auf den Spielstart.</div>';
- html+='<div class="panel"><h2>Rangliste</h2>'+ranking()+'</div><div class="panel"><h2>Quiz-Fragen bearbeiten</h2><p>JSON-Editor: komplette Quizsammlung bearbeiten und speichern.</p><button onclick="loadEditor()">Editor laden</button><div id="editor"></div></div>';
+ html+='<div class="panel"><h2>🏆 Rangliste</h2>'+ranking()+'</div><div class="panel"><h2>Quiz-Fragen bearbeiten</h2><p>JSON-Editor: komplette Quizsammlung bearbeiten und speichern.</p><button onclick="loadEditor()">Editor laden</button><div id="editor"></div></div>';
  }else if(view==='screen'){
  html+='<div class="screen-layout">';
- html+='<aside class="screen-side"><div class="panel"><h2>📱 Mitspielen</h2><p>QR-Code scannen</p><img src="/api/qr" alt="QR-Code zum Beitreten"><p class="muted">Namen eingeben und mitspielen</p><p>Teilnehmer: '+state.players.length+'</p></div></aside>';
+ html+='<aside class="screen-side"><div class="panel"><h2>JETZT MITMACHEN!</h2><img src="/api/qr" alt="QR-Code zum Beitreten"><div class="join-steps"><div><span>1</span> QR-Code scannen</div><div><span>2</span> Namen eingeben</div><div><span>3</span> Los geht’s!</div></div><p>Teilnehmer: '+state.players.length+'</p></div></aside>';
  html+='<section class="screen-center"><div class="panel" style="min-height:0;margin-bottom:18px"><h2>'+esc(state.quizTitle)+'</h2></div>';
  if(state.phase==='question')html+=questionUI();
  else if(state.phase==='result')html+='<div class="panel"><h2>✅ Richtige Antwort</h2><div class="big">'+esc(Array.isArray(state.results?.correct)?state.results.correct.map(i=>state.question.options?.[i]??i).join(', '):typeof state.results?.correct==='number'&&state.question.options?state.question.options[state.results.correct]:state.results?.correct)+'</div></div>';
@@ -36,7 +80,7 @@ function render(){
  else html+='<div class="panel"><h2>Gleich geht es los!</h2><p>Jetzt per QR-Code anmelden.</p></div>';
  html+='</section><aside class="screen-side">';
  if(state.leaderboardVisible!==false)html+='<div class="panel"><h2>🏆 Bestenliste</h2>'+ranking()+'</div>';
- else html+='<div class="panel"><h2>🏆 Bestenliste</h2><p class="muted">Vom Moderator ausgeblendet</p></div>';
+ else html+='<div class="panel"><h2>🏆 Bestenliste</h2><p class="muted">Wird später eingeblendet</p></div>';
  html+='</aside></div>';
  }else{
  if(!myId||!state.players.some(p=>p.id===myId))html+='<div class="panel"><h2>Mitspielen</h2><input id="name" placeholder="Dein Name" maxlength="35"> <button onclick="join()">Beitreten</button></div>';
