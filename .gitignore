@@ -1,3 +1,7 @@
 node_modules/
 quizzes.json
 .env
+
+# Private persistent player records
+player-history.json
+player-history.json.tmp
