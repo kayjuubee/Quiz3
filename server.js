@@ -22,7 +22,7 @@ let quizzes;
 try{quizzes=JSON.parse(fs.readFileSync('quizzes.json','utf8'))}catch{quizzes=defaultQuizzes}
 const persist=()=>fs.writeFileSync('quizzes.json',JSON.stringify(quizzes,null,2));
 const ip=()=>Object.values(networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address||'localhost';
-let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={};
+let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={}, leaderboardVisible=true;
 const quiz=()=>quizzes.find(q=>q.id===selected)||quizzes[0];
 const question=()=>quiz().questions[index];
 const normalize=s=>String(s??'').trim().toLocaleLowerCase('de');
@@ -35,16 +35,17 @@ function correct(q,a){
  if(q.type==='text')return normalize(a)===normalize(q.correct);
  return false;
 }
+function scoreAnswer(q,a){const speed=Math.max(0,Math.min(1,(deadline-a.at)/Math.max(1,deadline-started)));if(q.type==='estimate'){if(a.value===''||a.value==null||!Number.isFinite(Number(a.value)))return 0;const d=Math.abs(Number(a.value)-Number(q.correct)),t=Number(q.tolerance);if(!Number.isFinite(t)||t<0||d>t)return 0;const accuracy=t===0?1:1-d/t;return Math.round((800+200*speed)*accuracy)}return correct(q,a.value)?Math.round(800+200*speed):0}
 function publicQuestion(q){if(!q)return null;const {correct,tolerance,...safe}=q;return safe}
 function snapshot(){
  const q=question();
- return {phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score})=>({id,name,score})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
+ return {leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score})=>({id,name,score})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
 }
 function emit(){io.emit('state',snapshot())}
 function reveal(){
  if(phase!=='question')return;
  const q=question();phase='result';
- for(const a of Object.values(answers)){a.correct=correct(q,a.value);a.points=a.correct?Math.round(500+500*Math.max(0,(deadline-a.at)/(deadline-started))):0;if(players[a.id])players[a.id].score+=a.points}
+ for(const a of Object.values(answers)){a.correct=correct(q,a.value);a.points=scoreAnswer(q,a);if(players[a.id])players[a.id].score+=a.points}
  emit();
 }
 function next(){
@@ -64,6 +65,6 @@ io.on('connection',socket=>{
  socket.emit('state',snapshot());
  socket.on('join',(data,cb)=>{const name=String(data?.name||'').trim().slice(0,35);if(!name)return cb?.({error:'Bitte Namen eingeben'});let id=String(data?.id||'');if(!players[id])id=randomUUID();players[id]={id,name,score:players[id]?.score||0};socket.data.playerId=id;cb?.({id});emit()});
  socket.on('answer',(value,cb)=>{const id=socket.data.playerId;if(!id||!players[id]||phase!=='question'||Date.now()>deadline||answers[id])return cb?.({ok:false});answers[id]={id,value,at:Date.now()};cb?.({ok:true});emit()});
- socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'next':next();break;case 'reveal':reveal();break;case 'reset':index=-1;phase='lobby';players={};answers={};emit();break;case 'select':if(quizzes.some(q=>q.id===action.id)){selected=action.id;index=-1;phase='lobby';players={};answers={};emit()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
+ socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':index=-1;phase='lobby';players={};answers={};emit();break;case 'select':if(quizzes.some(q=>q.id===action.id)){selected=action.id;index=-1;phase='lobby';players={};answers={};emit()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
 });
 http.listen(PORT,'0.0.0.0',()=>console.log('KayJuuBee Quiz: http://localhost:'+PORT+'/host | Bildschirm: /screen | WLAN-IP: http://'+ip()+':'+PORT+'/play'));
