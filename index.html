@@ -118,6 +118,32 @@ a{color:#84fbed;text-underline-offset:3px}
 @media(max-width:550px){main{padding:14px}.panel{padding:18px}.screen-center .grid{grid-template-columns:1fr}.screen-center .question-panel h2{font-size:clamp(25px,7vw,34px)}.screen-center .option{min-height:70px}.brand-header{min-height:70px}.brand-header img{max-height:82px}}
 @media(prefers-reduced-motion:reduce){button{transition:none}button:hover:not(:disabled){transform:none}}
 
+
+/* Quizshow-Bühne: große Antworten, sichtbarer Countdown und Auflösung */
+.screen-view .screen-center .question-panel{position:relative;overflow:hidden;border:2px solid #4be9db;box-shadow:0 0 0 5px #39e9d014,0 22px 55px #0008}
+.screen-view .screen-center .question-panel h2{font-size:clamp(34px,3.7vw,64px);padding:clamp(22px,3vw,46px);margin:10px 0 24px}
+.screen-view .screen-center .option{display:flex;align-items:center;min-height:clamp(100px,11vh,155px);font-size:clamp(24px,2.5vw,39px);font-weight:850;padding:24px 30px;border:3px solid #d5e5ed;border-radius:18px;box-shadow:0 7px 0 #0003;line-height:1.25}
+.screen-view .screen-center .option:nth-child(1){background:#d9f2ff;color:#112a42;border-color:#70b5eb}
+.screen-view .screen-center .option:nth-child(2){background:#fff0b7;color:#3a290b;border-color:#f0c35d}
+.screen-view .screen-center .option:nth-child(3){background:#e2f6d3;color:#193522;border-color:#93cc75}
+.screen-view .screen-center .option:nth-child(4){background:#f5e0fa;color:#3b1d48;border-color:#d4a0e6}
+.screen-view .screen-center .timer{width:min(420px,90%);margin:16px auto 24px;background:#10293b;border:2px solid #547b90;border-radius:18px;padding:10px 20px;color:#ffde81;font-size:clamp(40px,4.5vw,76px);font-weight:900;letter-spacing:.03em}
+.screen-view .screen-center .timer.timer-urgent{color:#fff;background:#b92b36;border-color:#ff929a;animation:timer-pulse .7s ease-in-out infinite alternate}
+.screen-view .screen-center .timer.timer-ended{color:#fff;background:#85313a}
+.screen-view .screen-center .question-panel .muted{font-size:clamp(18px,1.5vw,25px);letter-spacing:.1em;font-weight:800}
+.screen-view .reveal-panel{border:3px solid #5af0bb;background:linear-gradient(140deg,#123a36,#102638);text-align:center;padding:clamp(32px,5vw,80px);animation:reveal-enter .55s cubic-bezier(.2,.8,.2,1) both}
+.screen-view .reveal-panel h2{font-size:clamp(27px,3.4vw,54px);color:#a3ffe2}
+.screen-view .reveal-answer{font-size:clamp(42px,5.4vw,92px);font-weight:900;line-height:1.18;color:#fff;overflow-wrap:anywhere;text-shadow:0 5px 20px #0005;margin:30px 0}
+.screen-view .reveal-check{display:inline-grid;place-items:center;width:92px;height:92px;border-radius:50%;background:#44e8b6;color:#092b27;font-size:58px;font-weight:900;box-shadow:0 0 0 12px #44e8b61c}
+.screen-view .result-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.screen-view .reveal-panel{position:relative;overflow:hidden}
+.screen-view .result-confetti span{position:absolute;top:-20px;left:var(--x);width:12px;height:24px;background:var(--c);transform:rotate(var(--r));animation:confetti-drop 2.5s ease-in var(--d) both}
+@keyframes timer-pulse{from{transform:scale(1)}to{transform:scale(1.045)}}
+@keyframes reveal-enter{from{opacity:0;transform:scale(.93) translateY(24px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes confetti-drop{from{transform:translateY(-30px) rotate(0deg);opacity:1}to{transform:translateY(75vh) rotate(560deg);opacity:0}}
+@media(max-width:850px){.screen-view .screen-center .option{min-height:78px;font-size:clamp(20px,4vw,29px)}}
+@media(prefers-reduced-motion:reduce){.screen-view .reveal-panel,.screen-view .result-confetti span,.screen-view .timer.timer-urgent{animation:none}}
+
 </style></head><body><main id="app"></main><script src="/socket.io/socket.io.js"></script><script>
 const socket=io(), view=location.pathname.slice(1)||'host', app=document.querySelector('#app');
 let selfieData=null,profileCode=null,statsOpen=false;
@@ -162,7 +188,7 @@ function render(){
  html+='<aside class="screen-side"><div class="panel"><h2>JETZT MITMACHEN!</h2><img src="/api/qr" alt="QR-Code zum Beitreten"><div class="join-steps"><div><span>1</span> QR-Code scannen</div><div><span>2</span> Namen eingeben</div><div><span>3</span> Los geht’s!</div></div><p>Teilnehmer: '+state.players.length+'</p></div></aside>';
  html+='<section class="screen-center"><div class="panel" style="min-height:0;margin-bottom:18px"><h2>'+esc(state.quizTitle)+'</h2></div>';
  if(state.phase==='question')html+=questionUI();
- else if(state.phase==='result')html+='<div class="panel"><h2>✅ Richtige Antwort</h2><div class="big">'+esc(Array.isArray(state.results?.correct)?(state.question.type==='sudoku'?state.results.correct.map(row=>row.join(' ')).join(' | '):state.results.correct.map(i=>state.question.options?.[i]??i).join(', ')):typeof state.results?.correct==='number'&&state.question.options?state.question.options[state.results.correct]:state.results?.correct)+'</div></div>';
+ else if(state.phase==='result')html+='<div class="panel reveal-panel"><div class="result-confetti" aria-hidden="true">'+Array.from({length:18},(_,i)=>'<span style="--x:'+(4+i*5.2)+'%;--c:'+['#41ead4','#ffd875','#f5a2ed','#8fd3ff'][i%4]+';--d:'+(i%6*.1)+'s;--r:'+(i*37)+'deg"></span>').join('')+'</div><div class="reveal-check">✓</div><h2>Richtige Antwort</h2><div class="reveal-answer">'+esc(Array.isArray(state.results?.correct)?(state.question.type==='sudoku'?state.results.correct.map(row=>row.join(' ')).join(' | '):state.results.correct.map(i=>state.question.options?.[i]??i).join(', ')):typeof state.results?.correct==='number'&&state.question.options?state.question.options[state.results.correct]:state.results?.correct)+'</div></div>';
  else if(state.phase==='finished')html+='<div class="panel"><h2>🏆 Quiz beendet</h2><p>Vielen Dank fürs Mitspielen!</p></div>';
  else html+='<div class="panel"><h2>Gleich geht es los!</h2><p>Jetzt per QR-Code anmelden.</p></div>';
  html+='</section><aside class="screen-side">';
@@ -179,7 +205,7 @@ function render(){
  }}
  app.innerHTML=html;updateTimer();
 }
-function updateTimer(){const t=document.querySelector('#timer');if(t&&state?.phase==='question')t.textContent='⏱ '+Math.max(0,Math.ceil((state.deadline-Date.now())/1000))+' s'}
+function updateTimer(){const t=document.querySelector('#timer');if(t&&state?.phase==='question'){const sec=Math.max(0,Math.ceil((state.deadline-Date.now())/1000));t.textContent='⏱ '+sec+' s';t.classList.toggle('timer-urgent',sec>0&&sec<=10);t.classList.toggle('timer-ended',sec===0)}}
 setInterval(updateTimer,250);
 socket.on('state',s=>{const newQuestion=!state||s.index!==state.index||s.quizId!==state.quizId||s.phase==='lobby';if(newQuestion){chosen=null;submitted=false}state=s;const editing=document.activeElement?.id==='answer';if(!editing)render()});
 window.loadEditor=async()=>{const data=await fetch('/api/quizzes').then(r=>r.json());document.querySelector('#editor').innerHTML='<textarea id="jsoneditor"></textarea><p><button onclick="saveEditor()">Quiz speichern</button></p>';document.querySelector('#jsoneditor').value=JSON.stringify(data,null,2)};
