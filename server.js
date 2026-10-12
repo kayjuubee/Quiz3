@@ -30,9 +30,19 @@ const kidsQuiz={id:'kinder',title:'KayJuuBee Kinderquiz',kids:true,questions:[
 {type:'boolean',text:'Die Sonne scheint in der Nacht immer am Himmel.',correct:false,time:35},
 {type:'single',text:'Welches Tier kann fliegen?',options:['Pferd 🐴','Vogel 🐦','Schaf 🐑'],correct:1,time:35}
 ]};
+
+// Beispiele für neue Fragetypen; Bilder für Promis/Autos im Quiz-Editor selbst ergänzen.
+const puzzleQuiz={id:'denkspiele',title:'Denkspiele & Bilderrätsel',questions:[
+{type:'sudoku',text:'Mini-Sudoku: Ergänze die fehlenden Zahlen (1–4).',grid:[[1,0,3,0],[0,4,0,2],[2,0,4,0],[0,3,0,1]],correct:[[1,2,3,4],[3,4,1,2],[2,1,4,3],[4,3,2,1]],time:90},
+{type:'sequence',text:'Welche Zahl setzt die Reihe fort? 2, 4, 8, 16, …',options:['18','24','32','36'],correct:2,time:30},
+{type:'pattern',text:'Welches Symbol folgt? 🔴 🔵 🔴 🔵 🔴 ?',options:['🔴','🟢','🔵','🟡'],correct:2,time:25},
+{type:'couple',text:'Sind diese beiden Prominenten ein Paar? (Beispiel – Fotos und Antwort ergänzen)',images:[],options:['Ja','Nein'],correct:1,time:30},
+{type:'carbrand',text:'Welche Automarke ist das? (Beispiel – Foto ohne Markenlogo ergänzen)',images:[],options:['Audi','BMW','Mercedes-Benz','Volkswagen'],correct:0,time:30},
+{type:'older',text:'Welche Person ist älter? (Beispiel – zwei Fotos und Antwort ergänzen)',images:[],options:['Person links','Person rechts'],correct:0,time:30}
+]};
 let quizzes;
 try{quizzes=JSON.parse(fs.readFileSync('quizzes.json','utf8'))}catch{quizzes=defaultQuizzes}
-quizzes=quizzes.filter(q=>q.id!=='kinder');quizzes.push(kidsQuiz);
+quizzes=quizzes.filter(q=>q.id!=='kinder');quizzes.push(kidsQuiz);if(!quizzes.some(q=>q.id==='denkspiele'))quizzes.push(puzzleQuiz);
 const persist=()=>fs.writeFileSync('quizzes.json',JSON.stringify(quizzes,null,2));
 const ip=()=>Object.values(networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address||'localhost';
 let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={}, leaderboardVisible=true, kidsMode=false, previousQuiz=quizzes[0].id;
@@ -55,6 +65,8 @@ const validAvatar=a=>typeof a==='string'&&/^data:image\/(jpeg|png|webp);base64,[
 const normalize=s=>String(s??'').trim().toLocaleLowerCase('de');
 function correct(q,a){
  if(a===undefined||a===null)return false;
+ if(q.type==='sudoku')return Array.isArray(a)&&JSON.stringify(a)===JSON.stringify(q.correct);
+ if(['sequence','pattern','couple','carbrand','older'].includes(q.type))return Number(a)===Number(q.correct);
  if(q.type==='single'||q.type==='logic')return Number(a)===Number(q.correct);
  if(q.type==='boolean')return String(a)===String(q.correct);
  if(q.type==='multi'||q.type==='order')return JSON.stringify(a)===JSON.stringify(q.correct);
