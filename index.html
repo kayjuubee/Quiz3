@@ -65,7 +65,7 @@ return '<div class="panel question-panel"><p class="muted">Frage '+(state.index+
 function render(){
  if(!state)return;
  document.body.className=view+'-view';
- let html='<header class="brand-header"><img src="/logo.svg" alt="KayJuuBee Eventmodule"></header>';
+ let html='<header class="brand-header"><img src="/logo-original.webp" onerror="this.onerror=null;this.src='/logo.svg'" alt="KayJuuBee Eventmodule"></header>';
  if(view==='host'){
  html+='<div class="panel"><h2>Spielleitung</h2><label>Quiz wählen: <select onchange="selectQuiz(this.value)">'+state.quizzes.map(q=>'<option value="'+esc(q.id)+'" '+(q.id===state.quizId?'selected':'')+'>'+esc(q.title)+'</option>').join('')+'</select></label><p><button onclick="host(\'next\')">Nächste Frage / Start</button> <button onclick="host(\'reveal\')">Auflösen</button> <button onclick="if(confirm(\'Spiel zurücksetzen?\'))host(\'reset\')">Zurücksetzen</button></p><p><label><input type="checkbox" onchange="setLeaderboard(this.checked)" '+(state.leaderboardVisible?'checked':'')+'> Bestenliste auf Beamer und Smartphones anzeigen</label></p><p>Teilnehmer: '+state.players.length+' · Antworten: '+state.answered+'</p><p>Bildschirm: <a style="color:#8ce9fd" href="/screen" target="_blank">/screen öffnen</a></p><p><input id="key" placeholder="Optionaler HOST_KEY" value="'+esc(hostKey)+'"> <button onclick="saveKey()">Schlüssel speichern</button></p></div>';
  html+=state.question&&state.phase!=='lobby'?questionUI():'<div class="panel">Warte auf den Spielstart.</div>';
