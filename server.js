@@ -18,13 +18,27 @@ const defaultQuizzes=[{id:'saalfeld',title:'Saalfeld-Quiz',questions:[
  {type:'text',text:'Wie heißt der Fluss, der durch Saalfeld fließt?',correct:'Saale',time:20},
  {type:'logic',text:'Was wird nasser, während es trocknet?',options:['Ein Handtuch','Ein Stein','Eine Kerze','Ein Schuh'],correct:0,time:25}
 ]}];
+const kidsQuiz={id:'kinder',title:'KayJuuBee Kinderquiz',kids:true,questions:[
+{type:'single',text:'Welches Tier macht Miau?',options:['Hund 🐶','Katze 🐱','Kuh 🐮'],correct:1,time:35},
+{type:'single',text:'Welche Farbe hat eine reife Banane meistens?',options:['Blau 💙','Gelb 💛','Lila 💜'],correct:1,time:35},
+{type:'single',text:'Wie viele Beine hat eine Spinne?',options:['6','8','10'],correct:1,time:40},
+{type:'boolean',text:'Ein Fisch lebt im Wasser. 🐟',correct:true,time:35},
+{type:'single',text:'Was brauchst du bei Regen?',options:['Regenschirm ☂️','Sonnenbrille 🕶️','Badehose 🩳'],correct:0,time:35},
+{type:'single',text:'Was ist größer?',options:['Maus 🐭','Elefant 🐘','Marienkäfer 🐞'],correct:1,time:35},
+{type:'single',text:'Welche Jahreszeit kommt nach dem Sommer?',options:['Frühling 🌷','Herbst 🍂','Winter ❄️'],correct:1,time:40},
+{type:'single',text:'Was ergibt 2 + 3?',options:['4','5','6'],correct:1,time:40},
+{type:'boolean',text:'Die Sonne scheint in der Nacht immer am Himmel.',correct:false,time:35},
+{type:'single',text:'Welches Tier kann fliegen?',options:['Pferd 🐴','Vogel 🐦','Schaf 🐑'],correct:1,time:35}
+]};
 let quizzes;
 try{quizzes=JSON.parse(fs.readFileSync('quizzes.json','utf8'))}catch{quizzes=defaultQuizzes}
+quizzes=quizzes.filter(q=>q.id!=='kinder');quizzes.push(kidsQuiz);
 const persist=()=>fs.writeFileSync('quizzes.json',JSON.stringify(quizzes,null,2));
 const ip=()=>Object.values(networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address||'localhost';
-let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={}, leaderboardVisible=true;
+let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={}, leaderboardVisible=true, kidsMode=false, previousQuiz=quizzes[0].id;
 const quiz=()=>quizzes.find(q=>q.id===selected)||quizzes[0];
 const question=()=>quiz().questions[index];
+const resetGame=()=>{index=-1;phase='lobby';players={};answers={};started=0;deadline=0;emit()};
 const normalize=s=>String(s??'').trim().toLocaleLowerCase('de');
 function correct(q,a){
  if(a===undefined||a===null)return false;
@@ -35,11 +49,11 @@ function correct(q,a){
  if(q.type==='text')return normalize(a)===normalize(q.correct);
  return false;
 }
-function scoreAnswer(q,a){const speed=Math.max(0,Math.min(1,(deadline-a.at)/Math.max(1,deadline-started)));if(q.type==='estimate'){if(a.value===''||a.value==null||!Number.isFinite(Number(a.value)))return 0;const d=Math.abs(Number(a.value)-Number(q.correct)),t=Number(q.tolerance);if(!Number.isFinite(t)||t<0||d>t)return 0;const accuracy=t===0?1:1-d/t;return Math.round((800+200*speed)*accuracy)}return correct(q,a.value)?Math.round(800+200*speed):0}
+function scoreAnswer(q,a){if(kidsMode){if(q.type==='estimate'){const t=Number(q.tolerance),d=Math.abs(Number(a.value)-Number(q.correct));return Number.isFinite(d)&&Number.isFinite(t)&&t>=0&&d<=t?Math.round(1000*(t===0?1:1-d/t)):0}return correct(q,a.value)?1000:0}const speed=Math.max(0,Math.min(1,(deadline-a.at)/Math.max(1,deadline-started)));if(q.type==='estimate'){if(a.value===''||a.value==null||!Number.isFinite(Number(a.value)))return 0;const d=Math.abs(Number(a.value)-Number(q.correct)),t=Number(q.tolerance);if(!Number.isFinite(t)||t<0||d>t)return 0;const accuracy=t===0?1:1-d/t;return Math.round((800+200*speed)*accuracy)}return correct(q,a.value)?Math.round(800+200*speed):0}
 function publicQuestion(q){if(!q)return null;const {correct,tolerance,...safe}=q;return safe}
 function snapshot(){
  const q=question();
- return {leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score})=>({id,name,score})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
+ return {kidsMode,leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score})=>({id,name,score})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
 }
 function emit(){io.emit('state',snapshot())}
 function reveal(){
@@ -59,14 +73,14 @@ app.get('/logo-original.webp',(req,res)=>{const path=process.cwd()+'/logo-origin
 app.get('/logo.svg',(req,res)=>res.sendFile(process.cwd()+'/logo.svg'));
 app.get('/api/network',(req,res)=>res.json({ip:ip(),port:PORT,url:'http://'+ip()+':'+PORT+'/play'}));
 app.get('/api/qr',async(req,res)=>{try{res.type('png').send(await QRCode.toBuffer('http://'+ip()+':'+PORT+'/play',{width:350,margin:2}))}catch(e){res.status(500).send(e.message)}});
-app.get('/api/quizzes',(req,res)=>res.json(quizzes));
-app.put('/api/quizzes',(req,res)=>{if(process.env.HOST_KEY&&req.get('x-host-key')!==process.env.HOST_KEY)return res.sendStatus(403);if(!Array.isArray(req.body)||!req.body.every(q=>q.id&&q.title&&Array.isArray(q.questions)))return res.sendStatus(400);quizzes=req.body;persist();selected=quizzes[0]?.id;index=-1;phase='lobby';players={};answers={};emit();res.json({ok:true})});
+app.get('/api/quizzes',(req,res)=>res.json(quizzes.filter(q=>q.id!=='kinder')));
+app.put('/api/quizzes',(req,res)=>{if(process.env.HOST_KEY&&req.get('x-host-key')!==process.env.HOST_KEY)return res.sendStatus(403);if(!Array.isArray(req.body)||!req.body.every(q=>q.id&&q.title&&Array.isArray(q.questions)))return res.sendStatus(400);quizzes=[...req.body.filter(q=>q.id!=='kinder'),kidsQuiz];persist();selected=kidsMode?'kinder':quizzes[0]?.id;resetGame();res.json({ok:true})});
 app.get('/:view(host|screen|play)',(req,res)=>res.sendFile(process.cwd()+'/index.html'));
 app.get('/',(req,res)=>res.redirect('/host'));
 io.on('connection',socket=>{
  socket.emit('state',snapshot());
  socket.on('join',(data,cb)=>{const name=String(data?.name||'').trim().slice(0,35);if(!name)return cb?.({error:'Bitte Namen eingeben'});let id=String(data?.id||'');if(!players[id])id=randomUUID();players[id]={id,name,score:players[id]?.score||0};socket.data.playerId=id;cb?.({id});emit()});
  socket.on('answer',(value,cb)=>{const id=socket.data.playerId;if(!id||!players[id]||phase!=='question'||Date.now()>deadline||answers[id])return cb?.({ok:false});answers[id]={id,value,at:Date.now()};cb?.({ok:true});emit()});
- socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':index=-1;phase='lobby';players={};answers={};emit();break;case 'select':if(quizzes.some(q=>q.id===action.id)){selected=action.id;index=-1;phase='lobby';players={};answers={};emit()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
+ socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'kidsMode':{const enable=!!action.enabled;if(enable!==kidsMode){if(enable){previousQuiz=selected;selected='kinder'}else{selected=quizzes.some(q=>q.id===previousQuiz)?previousQuiz:quizzes.find(q=>q.id!=='kinder')?.id||'kinder'}kidsMode=enable;resetGame()}break}case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':resetGame();break;case 'select':if(!kidsMode&&quizzes.some(q=>q.id===action.id&&q.id!=='kinder')){selected=action.id;previousQuiz=selected;resetGame()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
 });
 http.listen(PORT,'0.0.0.0',()=>console.log('KayJuuBee Quiz: http://localhost:'+PORT+'/host | Bildschirm: /screen | WLAN-IP: http://'+ip()+':'+PORT+'/play'));
