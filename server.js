@@ -39,6 +39,7 @@ let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, dead
 const quiz=()=>quizzes.find(q=>q.id===selected)||quizzes[0];
 const question=()=>quiz().questions[index];
 const resetGame=()=>{index=-1;phase='lobby';players={};answers={};started=0;deadline=0;emit()};
+const validAvatar=a=>typeof a==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(a)&&a.length<180000;
 const normalize=s=>String(s??'').trim().toLocaleLowerCase('de');
 function correct(q,a){
  if(a===undefined||a===null)return false;
@@ -53,7 +54,7 @@ function scoreAnswer(q,a){if(kidsMode){if(q.type==='estimate'){const t=Number(q.
 function publicQuestion(q){if(!q)return null;const {correct,tolerance,...safe}=q;return safe}
 function snapshot(){
  const q=question();
- return {kidsMode,leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score})=>({id,name,score})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
+ return {kidsMode,leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score,avatar})=>({id,name,score,avatar:avatar||null})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
 }
 function emit(){io.emit('state',snapshot())}
 function reveal(){
@@ -79,7 +80,8 @@ app.get('/:view(host|screen|play)',(req,res)=>res.sendFile(process.cwd()+'/index
 app.get('/',(req,res)=>res.redirect('/host'));
 io.on('connection',socket=>{
  socket.emit('state',snapshot());
- socket.on('join',(data,cb)=>{let id=String(data?.id||'');if(id&&players[id]){socket.data.playerId=id;cb?.({id,name:players[id].name,restored:true});emit();return}const name=String(data?.name||'').trim().slice(0,35);if(!name)return cb?.({error:'Bitte Namen eingeben'});id=randomUUID();players[id]={id,name,score:0};socket.data.playerId=id;cb?.({id,name,restored:false});emit()});
+ socket.on('join',(data,cb)=>{let id=String(data?.id||'');if(id&&players[id]){socket.data.playerId=id;cb?.({id,name:players[id].name,restored:true});emit();return}const name=String(data?.name||'').trim().slice(0,35);if(!name)return cb?.({error:'Bitte Namen eingeben'});id=randomUUID();players[id]={id,name,score:0,avatar:validAvatar(data?.avatar)?data.avatar:null};socket.data.playerId=id;cb?.({id,name,restored:false});emit()});
+ socket.on('avatar',(avatar,cb)=>{const id=socket.data.playerId;if(!id||!players[id])return cb?.({error:'Nicht angemeldet'});if(avatar!==null&&!validAvatar(avatar))return cb?.({error:'Bild zu groß oder ungültig'});players[id].avatar=avatar;cb?.({ok:true});emit()});
  socket.on('answer',(value,cb)=>{const id=socket.data.playerId;if(!id||!players[id]||phase!=='question'||Date.now()>deadline||answers[id])return cb?.({ok:false});answers[id]={id,value,at:Date.now()};cb?.({ok:true});emit()});
  socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'kidsMode':{const enable=!!action.enabled;if(enable!==kidsMode){if(enable){previousQuiz=selected;selected='kinder'}else{selected=quizzes.some(q=>q.id===previousQuiz)?previousQuiz:quizzes.find(q=>q.id!=='kinder')?.id||'kinder'}kidsMode=enable;resetGame()}break}case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':resetGame();break;case 'select':if(!kidsMode&&quizzes.some(q=>q.id===action.id&&q.id!=='kinder')){selected=action.id;previousQuiz=selected;resetGame()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
 });
