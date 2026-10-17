@@ -1,0 +1,1 @@
+Bilder für das Offline-Quiz. Bitte nur Bilder mit geklärten Nutzungsrechten verwenden. Die Bilddateien müssen vor dem Offline-Einsatz lokal im Ordner gespeichert werden.
