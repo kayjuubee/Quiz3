@@ -49,6 +49,8 @@ try{quizzes=JSON.parse(fs.readFileSync('quizzes.json','utf8'))}catch{quizzes=def
 quizzes=quizzes.filter(q=>q.id!=='kinder');quizzes.push(kidsQuiz);if(!quizzes.some(q=>q.id==='denkspiele'))quizzes.push(puzzleQuiz);if(!quizzes.some(q=>q.id==='bildraetsel30'))quizzes.push(pictureQuiz);if(!quizzes.some(q=>q.id==='fahrschule'))quizzes.push(drivingQuiz);
 const persist=()=>fs.writeFileSync('quizzes.json',JSON.stringify(quizzes,null,2));
 const ip=()=>Object.values(networkInterfaces()).flat().find(x=>x.family==='IPv4'&&!x.internal)?.address||'localhost';
+let autoNext=false,autoNextTimer=null;
+function cancelAutoNext(){if(autoNextTimer){clearTimeout(autoNextTimer);autoNextTimer=null}}
 let selected=quizzes[0].id, players={}, index=-1, phase='lobby', started=0, deadline=0, answers={}, questionToken=null, seenQuestion={}, leaderboardVisible=true, kidsMode=false, previousQuiz=quizzes[0].id;
 
 const DATA_FILE='player-history.json';
@@ -64,7 +66,7 @@ function report(){return {rounds:history.rounds.length,registered:Object.keys(hi
 
 const quiz=()=>quizzes.find(q=>q.id===selected)||quizzes[0];
 const question=()=>quiz().questions[index];
-const resetGame=()=>{roundId=randomUUID();roundPlayed=false;index=-1;phase='lobby';players={};answers={};questionToken=null;seenQuestion={};started=0;deadline=0;emit()};
+const resetGame=()=>{cancelAutoNext();autoNext=false;roundId=randomUUID();roundPlayed=false;index=-1;phase='lobby';players={};answers={};questionToken=null;seenQuestion={};started=0;deadline=0;emit()};
 const validAvatar=a=>typeof a==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(a)&&a.length<180000;
 const normalize=s=>String(s??'').trim().toLocaleLowerCase('de');
 function correct(q,a){
@@ -82,7 +84,7 @@ function scoreAnswer(q,a){if(kidsMode){if(q.type==='estimate'){const t=Number(q.
 function publicQuestion(q){if(!q)return null;const {correct,tolerance,...safe}=q;return safe}
 function snapshot(){
  const q=question();
- return {questionToken,seenCount:Object.keys(seenQuestion).length,seenPlayers:Object.keys(seenQuestion),kidsMode,leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score,avatar})=>({id,name,score,avatar:avatar||null})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
+ return {autoNext,questionToken,seenCount:Object.keys(seenQuestion).length,seenPlayers:Object.keys(seenQuestion),kidsMode,leaderboardVisible,phase,index,quizId:selected,quizTitle:quiz().title,total:quiz().questions.length,question:publicQuestion(q),deadline,now:Date.now(),players:Object.values(players).map(({id,name,score,avatar})=>({id,name,score,avatar:avatar||null})).sort((a,b)=>b.score-a.score),answered:Object.keys(answers).length,quizzes:quizzes.map(({id,title})=>({id,title})),results:phase==='result'&&q?{correct:q.correct,tolerance:q.tolerance,answers:Object.values(answers).map(a=>({name:players[a.id]?.name,answer:a.value,correct:a.correct,points:a.points}))}:null};
 }
 function emit(){io.emit('state',snapshot())}
 function reveal(){
@@ -90,8 +92,10 @@ function reveal(){
  const q=question();phase='result';
  for(const a of Object.values(answers)){a.correct=correct(q,a.value);a.points=scoreAnswer(q,a);if(players[a.id])players[a.id].score+=a.points}
  emit();
+ if(autoNext){cancelAutoNext();autoNextTimer=setTimeout(()=>{autoNextTimer=null;if(phase==='result'&&autoNext)next()},3500)}
 }
 function next(){
+ cancelAutoNext();
  if(phase==='question')reveal();
  index++;
  if(index>=quiz().questions.length){phase='finished';archiveRound();emit();return}
@@ -120,7 +124,7 @@ id=randomUUID();players[id]={id,name,score:0,code:code||null,avatar:validAvatar(
  socket.on('createProfile',(data,cb)=>{const id=socket.data.playerId,p=players[id];if(!p)return cb?.({error:'Bitte zuerst am Quiz teilnehmen'});if(p.code)return cb?.({code:p.code,existing:true});const code=newCode();history.profiles[code]={name:p.name,created:new Date().toISOString(),games:0,wins:0,totalPoints:0};try{saveHistory()}catch(e){delete history.profiles[code];return cb?.({error:'Profil konnte nicht gespeichert werden'})}p.code=code;cb?.({code});emit()});
  socket.on('deleteProfile',(code,cb)=>{const id=socket.data.playerId,p=players[id];if(!p||!p.code||p.code!==cleanCode(code))return cb?.({error:'Kein zugehöriges Profil'});delete history.profiles[p.code];for(const r of history.rounds)for(const entry of r.entries)if(entry.code===p.code){entry.code=null;entry.name='Gelöschtes Profil'}p.code=null;saveHistory();cb?.({ok:true});emit()});
  socket.on('avatar',(avatar,cb)=>{const id=socket.data.playerId;if(!id||!players[id])return cb?.({error:'Nicht angemeldet'});if(avatar!==null&&!validAvatar(avatar))return cb?.({error:'Bild zu groß oder ungültig'});players[id].avatar=avatar;cb?.({ok:true});emit()});
- socket.on('answer',(payload,cb)=>{const id=socket.data.playerId;if(!id||!players[id])return cb?.({ok:false,error:'Bitte erneut anmelden'});if(phase!=='question'||Date.now()>deadline)return cb?.({ok:false,error:'Antwortzeit abgelaufen'});if(!payload||payload.token!==questionToken)return cb?.({ok:false,error:'Die Frage hat gewechselt. Bitte die aktuelle Frage beantworten.'});if(answers[id])return cb?.({ok:false,error:'Antwort bereits eingegangen'});answers[id]={id,value:payload.value,at:Date.now()};cb?.({ok:true});emit()});
- socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'kidsMode':{const enable=!!action.enabled;if(enable!==kidsMode){if(enable){previousQuiz=selected;selected='kinder'}else{selected=quizzes.some(q=>q.id===previousQuiz)?previousQuiz:quizzes.find(q=>q.id!=='kinder')?.id||'kinder'}kidsMode=enable;resetGame()}break}case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':resetGame();break;case 'select':if(!kidsMode&&quizzes.some(q=>q.id===action.id&&q.id!=='kinder')){selected=action.id;previousQuiz=selected;resetGame()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
+ socket.on('answer',(payload,cb)=>{const id=socket.data.playerId;if(!id||!players[id])return cb?.({ok:false,error:'Bitte erneut anmelden'});if(phase!=='question'||Date.now()>deadline)return cb?.({ok:false,error:'Antwortzeit abgelaufen'});if(!payload||payload.token!==questionToken)return cb?.({ok:false,error:'Die Frage hat gewechselt. Bitte die aktuelle Frage beantworten.'});if(answers[id])return cb?.({ok:false,error:'Antwort bereits eingegangen'});answers[id]={id,value:payload.value,at:Date.now()};cb?.({ok:true});if(Object.keys(players).length>0&&Object.keys(answers).length===Object.keys(players).length)reveal();else emit()});
+ socket.on('host',(action,cb)=>{if(process.env.HOST_KEY&&action?.key!==process.env.HOST_KEY)return cb?.({error:'Host-Schlüssel falsch'});switch(action?.type){case 'autoNext':autoNext=!!action.enabled;if(!autoNext)cancelAutoNext();else if(phase==='result'){cancelAutoNext();autoNextTimer=setTimeout(()=>{autoNextTimer=null;if(phase==='result'&&autoNext)next()},3500)}emit();break;case 'kidsMode':{const enable=!!action.enabled;if(enable!==kidsMode){if(enable){previousQuiz=selected;selected='kinder'}else{selected=quizzes.some(q=>q.id===previousQuiz)?previousQuiz:quizzes.find(q=>q.id!=='kinder')?.id||'kinder'}kidsMode=enable;resetGame()}break}case 'leaderboard':leaderboardVisible=!!action.visible;emit();break;case 'next':next();break;case 'reveal':reveal();break;case 'reset':resetGame();break;case 'select':if(!kidsMode&&quizzes.some(q=>q.id===action.id&&q.id!=='kinder')){selected=action.id;previousQuiz=selected;resetGame()}break;default:return cb?.({error:'Unbekannte Aktion'})}cb?.({ok:true})});
 });
 http.listen(PORT,'0.0.0.0',()=>console.log('KayJuuBee Quiz: http://localhost:'+PORT+'/host | Bildschirm: /screen | WLAN-IP: http://'+ip()+':'+PORT+'/play'));
