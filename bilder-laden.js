@@ -3,7 +3,7 @@ const dir=path.join(__dirname,'quiz-bilder');fs.mkdirSync(dir,{recursive:true});
 const queries=[
 'David Beckham','Victoria Beckham','Ryan Reynolds','Blake Lively','Beyonce','Jay-Z','Tom Hanks','Rita Wilson','John Legend','Chrissy Teigen',
 'Volkswagen Golf','BMW 3 Series','Mercedes-Benz C-Class','Audi A4','Opel Corsa','Ford Mustang','Porsche 911','Tesla Model 3','Toyota Prius','Fiat 500',
-'Taylor Swift','Selena Gomez','Leonardo DiCaprio','Brad Pitt','Adele singer','Rihanna','Billie Eilish','Ariana Grande'];
+'Taylor Swift','Selena Gomez','Leonardo DiCaprio','Brad Pitt','Adele singer','Rihanna','Billie Eilish','Ariana Grande','Cristiano Ronaldo','Jennifer Aniston','Angelina Jolie','Tom Cruise','George Clooney','Ed Sheeran','Justin Bieber','Emma Watson','Daniel Radcliffe'];
 async function run(){
 const records=[];
 for(const term of queries){
